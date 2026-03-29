@@ -154,6 +154,23 @@ def predict_submit(request):
         base_time = result['minutes']
         final_time = int(base_time * complexity_factor)
 
+        # ⭐️ ดิกชันนารีเก็บค่า MAE ของแต่ละแผนก (Margin of Error)
+        MAE_DICT = {
+            'จักษุวิทยา (Ophthalmology)': 12,
+            'ศัลยกรรมระบบทางเดินอาหาร (Gastrointestinal Surgery)': 14,
+            'ตจวิทยา/ผิวหนัง (Dermatology)': 23,
+            'ศัลยกรรมทางเดินปัสสาวะ (Urology)': 23,
+            'นรีเวชวิทยา (Gynecology)': 29,
+            'ศัลยกรรมเต้านม (Breast Surgery)': 32,
+            'ศัลยกรรมกระดูกและข้อ (Orthopedics)': 33,
+            'โสต ศอ นาสิกวิทยา (Otolaryngology / ENT)': 36,
+            'ศัลยกรรมหัวใจและทรวงอก (Cardiovascular and Thoracic Surgery)': 39,
+            'ศัลยกรรมทั่วไป (General Surgery)': 48
+        }
+
+        # ⭐️ ดึงค่า MAE ของแผนกนั้นๆ มาใช้ ถ้าไม่ตรงกับในดิก ให้ใช้ 25 เป็นค่า Default
+        dept_mae = MAE_DICT.get(full_spec_name, 25)
+
         model_details = result.get('details', {})
         chart_data = {
             'xgb': int(model_details.get('XGBoost', base_time) * complexity_factor),
@@ -163,9 +180,9 @@ def predict_submit(request):
         
         context = {
             'stats': {
-                'min': max(15, int(final_time - 20)),
+                'min': max(15, int(final_time - dept_mae)), # ลบด้วย MAE ของแผนก บังคับขั้นต่ำ 15 นาที
                 'avg': final_time,
-                'max': int(final_time + 25)
+                'max': int(final_time + dept_mae)           # บวกด้วย MAE ของแผนก
             },
             'doctor_name': doc_name_full,
             'treatment_list': treatment_names_display,
