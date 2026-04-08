@@ -149,27 +149,27 @@ def predict_submit(request):
             'Start_Hour': start_hour, 
         }
 
-        # ทำนายผลด้วย AI (Voting)
+       # ทำนายผลด้วย AI (Optimized Weighted Ensemble)
         result = predictor.predict(input_data)
         base_time = result['minutes']
         final_time = int(base_time * complexity_factor)
 
-        # ⭐️ ดิกชันนารีเก็บค่า MAE ของแต่ละแผนก (Margin of Error)
+        # ⭐️ อัปเดต MAE_DICT จากผลการทดสอบล่าสุด (Auto-Tuned) ⭐️
         MAE_DICT = {
-            'จักษุวิทยา (Ophthalmology)': 12,
-            'ศัลยกรรมระบบทางเดินอาหาร (Gastrointestinal Surgery)': 14,
-            'ตจวิทยา/ผิวหนัง (Dermatology)': 23,
-            'ศัลยกรรมทางเดินปัสสาวะ (Urology)': 23,
-            'นรีเวชวิทยา (Gynecology)': 29,
-            'ศัลยกรรมเต้านม (Breast Surgery)': 32,
-            'ศัลยกรรมกระดูกและข้อ (Orthopedics)': 33,
-            'โสต ศอ นาสิกวิทยา (Otolaryngology / ENT)': 36,
-            'ศัลยกรรมหัวใจและทรวงอก (Cardiovascular and Thoracic Surgery)': 39,
-            'ศัลยกรรมทั่วไป (General Surgery)': 48
+            'จักษุวิทยา (Ophthalmology)': 9,
+            'ศัลยกรรมระบบทางเดินอาหาร (Gastrointestinal Surgery)': 12,
+            'ตจวิทยา/ผิวหนัง (Dermatology)': 16,
+            'ศัลยกรรมทางเดินปัสสาวะ (Urology)': 17,
+            'ศัลยกรรมเต้านม (Breast Surgery)': 22,
+            'ศัลยกรรมกระดูกและข้อ (Orthopedics)': 24,
+            'นรีเวชวิทยา (Gynecology)': 25,
+            'โสต ศอ นาสิกวิทยา (Otolaryngology / ENT)': 28,
+            'ศัลยกรรมหัวใจและทรวงอก (Cardiovascular and Thoracic Surgery)': 34,
+            'ศัลยกรรมทั่วไป (General Surgery)': 40
         }
 
-        # ⭐️ ดึงค่า MAE ของแผนกนั้นๆ มาใช้ ถ้าไม่ตรงกับในดิก ให้ใช้ 25 เป็นค่า Default
-        dept_mae = MAE_DICT.get(full_spec_name, 25)
+        # ⭐️ ดึงค่า MAE ของแผนกนั้นๆ มาใช้ ถ้าไม่ตรงกับในดิก ให้ใช้ 20 เป็นค่า Default
+        dept_mae = MAE_DICT.get(full_spec_name, 20)
 
         model_details = result.get('details', {})
         chart_data = {

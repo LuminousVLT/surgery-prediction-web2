@@ -13,6 +13,7 @@ class SurgeryPredictor:
         self.is_ready = False
         self.models = {}
         self.feature_columns = []
+        self.optimal_weights = {} # ⭐️ เตรียมตัวแปรไว้เก็บสัดส่วนทองคำ
         self.load_resources()
 
     def load_resources(self):
@@ -38,6 +39,9 @@ class SurgeryPredictor:
             self.global_mean = saved_data['global_mean']
             self.feature_columns = saved_data['feature_names']
             
+            # ⭐️ 3.1 ดึงสัดส่วนทองคำมาเก็บไว้ใช้งาน ⭐️
+            self.optimal_weights = saved_data.get('optimal_weights', {})
+            
             # 4. แปลงสถิติรายคู่เป็น Dictionary เพื่อความเร็ว
             ds_df = saved_data['doc_spec_stats']
             self.ds_map = ds_df.set_index(['Doctor', 'Specialty'])['Doc_Spec_Avg'].to_dict()
@@ -46,7 +50,7 @@ class SurgeryPredictor:
             self.da_map = da_df.set_index(['Doctor', 'AnesthesiaType'])['Doc_Anes_Avg'].to_dict()
             
             self.is_ready = True
-            print(f"✅ [AI Engine] โหลด Production Model (Voting) สำเร็จ!")
+            print(f"✅ [AI Engine] โหลด Production Model (Optimized Weights) สำเร็จ!")
             
         except Exception as e:
             print(f"❌ [AI Engine] เกิดข้อผิดพลาดตอนโหลดทรัพยากร: {e}")
@@ -169,16 +173,33 @@ class SurgeryPredictor:
             X = self.preprocess_input(input_data)
             if X is None: return {'minutes': 0, 'details': {}}
 
-            # ⭐️ ทายผลจาก 3 โมเดล แล้วจับมา "หาร 3" ตรงๆ เลย! (Voting)
+            # ทายผลจาก 3 โมเดล
             p_xgb = max(np.expm1(self.models['xgb'].predict(X))[0], 0)
             p_lgb = max(np.expm1(self.models['lgb'].predict(X))[0], 0)
             p_cat = max(np.expm1(self.models['cat'].predict(X))[0], 0)
             
-            avg_min = (p_xgb + p_lgb + p_cat) / 3
+            # ⭐️ 1. ดึงชื่อแผนกที่ User เลือกมาเพื่อหาสัดส่วนทองคำ
+            spec = str(input_data.get('Specialty', 'Unknown'))
+            
+            # ⭐️ 2. ค้นหาสัดส่วน (ถ้าไม่มีแผนกนี้ ให้ใช้ GLOBAL ถ้าพังอีกให้ใช้ 1/3)
+            weights = self.optimal_weights.get(
+                spec, 
+                self.optimal_weights.get('GLOBAL', {'xgb_weight': 1/3, 'lgb_weight': 1/3, 'cat_weight': 1/3})
+            )
+            
+            # ⭐️ 3. คำนวณเวลาใหม่ด้วย "สัดส่วนทองคำ" (ไม่ต้องหาร 3 แล้ว)
+            weighted_min = (p_xgb * weights['xgb_weight']) + \
+                           (p_lgb * weights['lgb_weight']) + \
+                           (p_cat * weights['cat_weight'])
             
             return {
-                'minutes': int(avg_min),
-                'details': {'XGBoost': int(p_xgb), 'LightGBM': int(p_lgb), 'CatBoost': int(p_cat)}
+                'minutes': int(weighted_min), # เวลาที่ส่งกลับไปให้หน้า views.py จะแม่นยำที่สุด
+                'details': {
+                    'XGBoost': int(p_xgb), 
+                    'LightGBM': int(p_lgb), 
+                    'CatBoost': int(p_cat),
+                    'Used_Weights': weights # แอบส่ง weight กลับไปให้เผื่ออยาก Debug ดู
+                }
             }
         except Exception as e:
             print(f"❌ [AI Engine] Prediction Error: {e}")
