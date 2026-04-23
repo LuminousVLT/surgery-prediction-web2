@@ -3,22 +3,25 @@ import numpy as np
 import joblib
 import os
 import re
+import xgboost as xgb
+import lightgbm as lgb
+from catboost import CatBoostRegressor
 from django.conf import settings
 
 # พาธไปยังโฟลเดอร์เก็บโมเดล
-MODEL_PATH = os.path.join(settings.BASE_DIR, 'ml_models') # เปลี่ยนให้ตรงกับโฟลเดอร์ในโปรเจกต์คุณเจมส์นะ
+MODEL_PATH = os.path.join(settings.BASE_DIR, 'ml_models')
 
 class SurgeryPredictor:
     def __init__(self):
         self.is_ready = False
         self.models = {}
         self.feature_columns = []
-        self.optimal_weights = {} # ⭐️ เตรียมตัวแปรไว้เก็บสัดส่วนทองคำ
+        self.optimal_weights = {} # ⭐️ เก็บสัดส่วนทองคำ
         self.load_resources()
 
     def load_resources(self):
         try:
-            # 1. โหลดไฟล์ .pkl ก้อนใหญ่ (จากที่คุณเซฟไว้ 100% Data)
+            # 1. โหลดไฟล์ .pkl ก้อนใหญ่ (100% Data)
             model_file = os.path.join(MODEL_PATH, 'surgery_duration_models_100pct.pkl')
             if not os.path.exists(model_file):
                 print(f"❌ [AI Engine] ไม่พบไฟล์โมเดลที่: {model_file}")
@@ -39,7 +42,7 @@ class SurgeryPredictor:
             self.global_mean = saved_data['global_mean']
             self.feature_columns = saved_data['feature_names']
             
-            # ⭐️ 3.1 ดึงสัดส่วนทองคำมาเก็บไว้ใช้งาน ⭐️
+            # 3.1 ดึงสัดส่วนทองคำมาเก็บไว้ใช้งาน
             self.optimal_weights = saved_data.get('optimal_weights', {})
             
             # 4. แปลงสถิติรายคู่เป็น Dictionary เพื่อความเร็ว
@@ -82,16 +85,12 @@ class SurgeryPredictor:
         raw_codes = input_data.get('TreatmentCode', [])
         if isinstance(raw_codes, str): raw_codes = [raw_codes]
         
-        # ยุบรวมรหัสให้เป็น Primary Code
         mapped_codes = [self.audit_map.get(str(c).strip().upper(), str(c).strip().upper()) for c in raw_codes]
-        
-        # คำนวณความยาก Main vs Support
         weights = [self.code_weights.get(c, self.global_mean) for c in mapped_codes]
         
         if weights:
             main_comp = max(weights)
             support_comp = sum(weights) - main_comp
-            # เลือกรหัสที่น้ำหนักเยอะที่สุดมาเป็นตัวแทนเคส
             main_code = mapped_codes[weights.index(main_comp)]
         else:
             main_comp = self.global_mean
@@ -101,12 +100,10 @@ class SurgeryPredictor:
         # --- 4. การจัดการชื่อหมอ (Identity Match) ---
         raw_doc = str(input_data.get('Doctor', 'Unknown')).strip()
         
-        # แปลง [ID] Name -> Name (ID) ให้ตรงกับที่ AI จำได้ 
         match = re.match(r'\[(.*?)\]\s*(.*)', raw_doc)
         doc_format_1 = f"{match.group(2).strip()} ({match.group(1).strip()})" if match else raw_doc
         doc_format_2 = match.group(1).strip() if match else raw_doc 
         
-        # เลือกชื่อที่ AI รู้จัก 
         if doc_format_1 in self.doc_stats:
             doctor_clean = doc_format_1
         elif doc_format_2 in self.doc_stats:
@@ -157,14 +154,19 @@ class SurgeryPredictor:
         cat_cols = ['Gender', 'FacilityRmsNo', 'ORClassifiedType', 'ORCaseType', 
                     'AnesthesiaType', 'Day_of_Week', 'Doctor', 'Main_TreatmentCode', 
                     'Specialty', 'Time_Period', 'BMI_Cat']
+        
         for c in cat_cols:
             if c in final_df.columns:
                 final_df[c] = final_df[c].astype(str).replace('nan', 'Unknown').astype('category')
 
-        # เรียงคอลัมน์และเติมค่าที่ขาด
+        # ⭐️ ป้องกัน Error กรณีคอลัมน์ขาดหายไป ให้เติมข้อมูลตามชนิดที่ถูกต้อง
         for col in self.feature_columns:
             if col not in final_df.columns:
-                final_df[col] = 0
+                if col in cat_cols:
+                    final_df[col] = 'Unknown'
+                    final_df[col] = final_df[col].astype('category')
+                else:
+                    final_df[col] = 0.0
 
         return final_df.reindex(columns=self.feature_columns)
 
@@ -178,27 +180,27 @@ class SurgeryPredictor:
             p_lgb = max(np.expm1(self.models['lgb'].predict(X))[0], 0)
             p_cat = max(np.expm1(self.models['cat'].predict(X))[0], 0)
             
-            # ⭐️ 1. ดึงชื่อแผนกที่ User เลือกมาเพื่อหาสัดส่วนทองคำ
+            # 1. ดึงชื่อแผนกที่ User เลือกมาเพื่อหาสัดส่วนทองคำ
             spec = str(input_data.get('Specialty', 'Unknown'))
             
-            # ⭐️ 2. ค้นหาสัดส่วน (ถ้าไม่มีแผนกนี้ ให้ใช้ GLOBAL ถ้าพังอีกให้ใช้ 1/3)
+            # 2. ค้นหาสัดส่วน (ถ้าไม่มีแผนกนี้ ให้ใช้ GLOBAL)
             weights = self.optimal_weights.get(
                 spec, 
                 self.optimal_weights.get('GLOBAL', {'xgb_weight': 1/3, 'lgb_weight': 1/3, 'cat_weight': 1/3})
             )
             
-            # ⭐️ 3. คำนวณเวลาใหม่ด้วย "สัดส่วนทองคำ" (ไม่ต้องหาร 3 แล้ว)
+            # 3. คำนวณเวลาใหม่ด้วย "สัดส่วนทองคำ"
             weighted_min = (p_xgb * weights['xgb_weight']) + \
                            (p_lgb * weights['lgb_weight']) + \
                            (p_cat * weights['cat_weight'])
             
             return {
-                'minutes': int(weighted_min), # เวลาที่ส่งกลับไปให้หน้า views.py จะแม่นยำที่สุด
+                'minutes': int(weighted_min),
                 'details': {
                     'XGBoost': int(p_xgb), 
                     'LightGBM': int(p_lgb), 
                     'CatBoost': int(p_cat),
-                    'Used_Weights': weights # แอบส่ง weight กลับไปให้เผื่ออยาก Debug ดู
+                    'Used_Weights': weights 
                 }
             }
         except Exception as e:

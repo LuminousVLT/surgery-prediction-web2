@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
 from django.contrib.auth import logout as auth_logout 
 
+# สร้าง Instance ของโมเดลไว้ให้พร้อมใช้งาน
 predictor = SurgeryPredictor()
 
 # ดึง Audit Map ล่าสุดที่เพิ่งเทรนเสร็จมาจาก predictor
@@ -149,12 +150,12 @@ def predict_submit(request):
             'Start_Hour': start_hour, 
         }
 
-       # ทำนายผลด้วย AI (Optimized Weighted Ensemble)
+        # ทำนายผลด้วย AI (Optimized Weighted Ensemble)
         result = predictor.predict(input_data)
         base_time = result['minutes']
         final_time = int(base_time * complexity_factor)
 
-        # ⭐️ อัปเดต MAE_DICT จากผลการทดสอบล่าสุด (Auto-Tuned) ⭐️
+        # ⭐️ อัปเดต MAE_DICT จากผลการทดสอบล่าสุด (Auto-Tuned)
         MAE_DICT = {
             'จักษุวิทยา (Ophthalmology)': 9,
             'ศัลยกรรมระบบทางเดินอาหาร (Gastrointestinal Surgery)': 12,
@@ -168,7 +169,7 @@ def predict_submit(request):
             'ศัลยกรรมทั่วไป (General Surgery)': 40
         }
 
-        # ⭐️ ดึงค่า MAE ของแผนกนั้นๆ มาใช้ ถ้าไม่ตรงกับในดิก ให้ใช้ 20 เป็นค่า Default
+        # ดึงค่า MAE ของแผนกนั้นๆ มาใช้ ถ้าไม่ตรงกับในดิก ให้ใช้ 20 เป็นค่า Default
         dept_mae = MAE_DICT.get(full_spec_name, 20)
 
         model_details = result.get('details', {})
@@ -180,7 +181,7 @@ def predict_submit(request):
         
         context = {
             'stats': {
-                'min': max(15, int(final_time - dept_mae)), # ลบด้วย MAE ของแผนก บังคับขั้นต่ำ 15 นาที
+                'min': max(15, int(final_time - dept_mae)), # บังคับขั้นต่ำ 15 นาที
                 'avg': final_time,
                 'max': int(final_time + dept_mae)           # บวกด้วย MAE ของแผนก
             },
