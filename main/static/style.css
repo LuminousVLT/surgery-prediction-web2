@@ -1,4 +1,13 @@
-/* Auth Pages Styling */
+/* =========================================
+   Global Reset & Box Sizing
+========================================= */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+/* =========================================
+   Auth Pages Styling
+========================================= */
 :root {
     --primary-color: #007bff;
     --secondary-color: #6c757d;
@@ -14,6 +23,7 @@ body.auth-bg {
     align-items: center;
     justify-content: center;
     font-family: 'Sarabun', sans-serif;
+    margin: 0; /* เผื่อขอบขาวรอบหน้าจอ */
 }
 
 .auth-card {
@@ -21,8 +31,10 @@ body.auth-bg {
     padding: 2.5rem;
     border-radius: 15px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    width: 100%;
+    
+    width: 90%; /* ⭐️ แก้จาก 100% เป็น 90% เพื่อให้มีขอบซ้ายขวาบนมือถือ */
     max-width: 400px;
+    
     border-top: 5px solid var(--primary-color);
 }
 
@@ -35,6 +47,7 @@ body.auth-bg {
 
 .form-group {
     margin-bottom: 1.2rem;
+    position: relative; /* ⭐️ สำคัญมาก: ช่วยขังไอคอนลูกตาให้อยู่ในกล่องนี้ */
 }
 
 .form-group label {
@@ -89,20 +102,33 @@ body.auth-bg {
     font-weight: bold;
 }
 
-/* Error & Success Messages */
+/* =========================================
+   Error & Success Messages
+========================================= */
 .alert {
     padding: 10px;
     border-radius: 5px;
     margin-bottom: 15px;
     font-size: 0.85rem;
 }
-.alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-.alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.alert-error { 
+    background: #f8d7da; 
+    color: #721c24; 
+    border: 1px solid #f5c6cb; 
+}
+.alert-success { 
+    background: #d4edda; 
+    color: #155724; 
+    border: 1px solid #c3e6cb; 
+}
 
+/* =========================================
+   Password Visibility Toggle (Eye Icon)
+========================================= */
 .eye-icon {
     position: absolute;
     right: 12px;
-    top: 38px;
+    top: 38px; /* ถ้าไอคอนยังไม่ตรงกลางช่อง ให้ลองขยับตัวเลขนี้ขึ้นลงนิดหน่อยครับ (เช่น 35px หรือ 40px) */
     cursor: pointer;
     color: #888;
 }

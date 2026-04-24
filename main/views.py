@@ -9,11 +9,9 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
 from django.contrib.auth import logout as auth_logout 
+from datetime import datetime
 
-# สร้าง Instance ของโมเดลไว้ให้พร้อมใช้งาน
 predictor = SurgeryPredictor()
-
-# ดึง Audit Map ล่าสุดที่เพิ่งเทรนเสร็จมาจาก predictor
 TREATMENT_MAPPING = getattr(predictor, 'audit_map', {})
 
 def get_primary_code(code):
@@ -55,16 +53,13 @@ def get_dropdown_data():
         for _, row in treat_df.iterrows():
             raw_code = str(row.get('TreatmentCode', '')).strip().upper()
             spec_name = str(row.get('SpecialtyName', '')).strip()
-            
             primary_code = get_primary_code(raw_code)
 
-            if primary_code in seen_primary_codes:
-                continue
+            if primary_code in seen_primary_codes: continue
             
             name = str(row.get('TreatmentName', '')).strip()
             if not name or name == 'nan':
                 name = str(row.get('TreatmentLocalName', '')).strip()
-            
             if spec_name.lower() == 'anes' or raw_code.startswith('PF'): continue
             
             context['treatments'].append({
@@ -72,13 +67,10 @@ def get_dropdown_data():
                 'text': f"[{primary_code}] {name}",
                 'spec': spec_name
             })
-            
             seen_primary_codes.add(primary_code)
             
-        print(f"✅ [System] สร้าง Dropdown สำเร็จ: หัตถการ {len(context['treatments'])} รายการ")
-            
     except Exception as e:
-        print(f"❌ [Error] สร้าง Dropdown ล้มเหลว: {e}")
+        pass
     return context
 
 DROPDOWN_DATA = get_dropdown_data()
@@ -109,8 +101,7 @@ def predict_page(request):
 
 @login_required
 def predict_submit(request):
-    if request.method != 'POST':
-        return redirect('predict_page')
+    if request.method != 'POST': return redirect('predict_page')
 
     try:
         raw_codes = request.POST.getlist('TreatmentCode')
@@ -119,6 +110,10 @@ def predict_submit(request):
         doc_id = request.POST.get('Doctor')
         spec_id = request.POST.get('Specialty')
         complexity_factor = float(request.POST.get('Complexity', 1.0))
+        
+        room_no = request.POST.get('FacilityRmsNo', 'Unknown')
+        case_type = request.POST.get('ORCaseType', 'Elective')
+        classified_type = request.POST.get('ORClassifiedType', 'Major')
         
         full_spec_name = next((s['name'] for s in DROPDOWN_DATA['all_specialties'] if s['id'] == spec_id), spec_id)
         
@@ -129,67 +124,67 @@ def predict_submit(request):
 
         doc_name_full = next((d['text'] for d in DROPDOWN_DATA['doctors'] if d['id'] == doc_id), doc_id)
 
-        start_time_str = request.POST.get('StartTime', '09:00')
+        # ⭐️ จัดการ DateTime ⭐️
+        start_datetime_str = request.POST.get('StartTime', '')
         try:
-            start_hour = int(start_time_str.split(':')[0])
+            if 'T' in start_datetime_str:
+                start_hour = int(start_datetime_str.split('T')[1].split(':')[0])
+            else:
+                start_hour = 9
         except:
             start_hour = 9 
 
+        weight = float(request.POST.get('BodyWeight', 60))
+        height = float(request.POST.get('Height', 160))
+        age = float(request.POST.get('Age', 40))
+        gender = request.POST.get('Gender', 'Unknown')
+        anes_type = request.POST.get('AnesthesiaType', 'ANES_GA')
+        bmi_val = weight / ((height / 100) ** 2) if height > 0 else 0
+
         input_data = {
-            'Age': float(request.POST.get('Age', 40)),
-            'Height': float(request.POST.get('Height', 160)),
-            'BodyWeight': float(request.POST.get('BodyWeight', 60)),
-            'Gender': request.POST.get('Gender', 'Unknown'),
+            'Age': age,
+            'Height': height,
+            'BodyWeight': weight,
+            'Gender': gender,
             'Doctor': doc_name_full, 
             'TreatmentCode': normalized_codes, 
             'Specialty': spec_id, 
-            'AnesthesiaType': request.POST.get('AnesthesiaType', 'ANES_GA'),
-            'ORCaseType': request.POST.get('ORCaseType', 'Unknown'),
-            'FacilityRmsNo': request.POST.get('FacilityRmsNo', 'Unknown'),
-            'ORClassifiedType': request.POST.get('ORClassifiedType', 'Unknown'),
+            'AnesthesiaType': anes_type,
+            'ORCaseType': case_type,
+            'FacilityRmsNo': room_no,
+            'ORClassifiedType': classified_type,
             'Start_Hour': start_hour, 
         }
 
-        # ทำนายผลด้วย AI (Optimized Weighted Ensemble)
         result = predictor.predict(input_data)
-        base_time = result['minutes']
-        final_time = int(base_time * complexity_factor)
-
-        # ⭐️ อัปเดต MAE_DICT จากผลการทดสอบล่าสุด (Auto-Tuned)
-        MAE_DICT = {
-            'จักษุวิทยา (Ophthalmology)': 9,
-            'ศัลยกรรมระบบทางเดินอาหาร (Gastrointestinal Surgery)': 12,
-            'ตจวิทยา/ผิวหนัง (Dermatology)': 16,
-            'ศัลยกรรมทางเดินปัสสาวะ (Urology)': 17,
-            'ศัลยกรรมเต้านม (Breast Surgery)': 22,
-            'ศัลยกรรมกระดูกและข้อ (Orthopedics)': 24,
-            'นรีเวชวิทยา (Gynecology)': 25,
-            'โสต ศอ นาสิกวิทยา (Otolaryngology / ENT)': 28,
-            'ศัลยกรรมหัวใจและทรวงอก (Cardiovascular and Thoracic Surgery)': 34,
-            'ศัลยกรรมทั่วไป (General Surgery)': 40
-        }
-
-        # ดึงค่า MAE ของแผนกนั้นๆ มาใช้ ถ้าไม่ตรงกับในดิก ให้ใช้ 20 เป็นค่า Default
-        dept_mae = MAE_DICT.get(full_spec_name, 20)
-
-        model_details = result.get('details', {})
-        chart_data = {
-            'xgb': int(model_details.get('XGBoost', base_time) * complexity_factor),
-            'lgb': int(model_details.get('LightGBM', base_time) * complexity_factor),
-            'cat': int(model_details.get('CatBoost', base_time) * complexity_factor)
-        }
+        base_avg = result.get('avg', 0)
+        base_min = result.get('min', 0)
+        base_max = result.get('max', 0)
+        
+        # ปัจจัยความยาก (Complexity Factor)
+        final_avg = int(base_avg * complexity_factor)
+        final_min = int(base_min * complexity_factor)
+        final_max = int(base_max * complexity_factor)
         
         context = {
             'stats': {
-                'min': max(15, int(final_time - dept_mae)), # บังคับขั้นต่ำ 15 นาที
-                'avg': final_time,
-                'max': int(final_time + dept_mae)           # บวกด้วย MAE ของแผนก
+                'min': max(5, final_min), 
+                'avg': final_avg,
+                'max': final_max           
             },
             'doctor_name': doc_name_full,
             'treatment_list': treatment_names_display,
             'main_specialty': full_spec_name,
             'treatment_count': len(normalized_codes),
-            'model_details': chart_data
+            'patient_info': {
+                'age': int(age),
+                'bmi': round(bmi_val, 1),
+                'gender': gender,
+                'anes': anes_type,
+                'room': room_no,
+                'case_type': case_type,
+                'classified': classified_type
+            }
         }
         return render(request, 'result.html', context)
 
