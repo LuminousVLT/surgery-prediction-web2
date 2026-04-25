@@ -100,15 +100,31 @@
                         
                         <div class="data-row">
                             <span class="text-muted"><i class="fa-solid fa-location-dot me-2"></i>สถานที่ (Location)</span>
-                            <span class="fw-bold">{{ patient_info.room }}</span>
+                            <span class="fw-bold">
+                                {% if patient_info.room == '4OR' %}400 เตียง
+                                {% elif patient_info.room == 'OR' %}100 เตียง
+                                {% elif patient_info.room == 'ORHB' %}Hybrid
+                                {% elif patient_info.room == 'EOUT' %}นอกเวลา
+                                {% elif patient_info.room == 'OROUT' %}100 เตียง (นอกเวลา)
+                                {% elif patient_info.room == '4OROT' %}400 เตียง (นอกเวลา)
+                                {% elif patient_info.room == 'OROPH' %}OROPH
+                                {% else %}{{ patient_info.room }}{% endif %}
+                            </span>
                         </div>
                         
                         <div class="data-row">
                             <span class="text-muted"><i class="fa-solid fa-tags me-2"></i>ประเภทเคส</span>
                             <span class="fw-bold">
-                                {{ patient_info.classified }} 
-                                <span class="text-muted">|</span> 
-                                {{ patient_info.case_type }}
+                                {% if patient_info.classified == '1' %}ผ่าตัดใหญ่ (Major)
+                                {% elif patient_info.classified == '2' %}ผ่าตัดเล็ก (Minor)
+                                {% else %}{{ patient_info.classified }}{% endif %}
+                                
+                                <span class="text-muted mx-1">|</span> 
+                                
+                                {% if patient_info.case_type == '1' %}ฉุกเฉิน (Emergency)
+                                {% elif patient_info.case_type == '2' %}เร่งด่วน (Urgency)
+                                {% elif patient_info.case_type == '3' %}นัดหมาย (Elective)
+                                {% else %}{{ patient_info.case_type }}{% endif %}
                             </span>
                         </div>
 
@@ -118,18 +134,27 @@
                         </div>
                         
                         <div class="data-row">
-                            <span class="text-muted"><i class="fa-solid fa-weight-scale me-2"></i>ดัชนีมวลกาย (BMI)</span>
-                            <span class="fw-bold">{{ patient_info.bmi }}</span>
+                            <span class="text-muted"><i class="fa-solid fa-venus-mars me-2"></i>เพศ</span>
+                            <span class="fw-bold">
+                                {% if patient_info.gender == '2' %}ชาย
+                                {% elif patient_info.gender == '1' %}หญิง
+                                {% else %}ไม่ระบุ{% endif %}
+                            </span>
                         </div>
                         
                         <div class="data-row">
-                            <span class="text-muted"><i class="fa-solid fa-mask-ventilator me-2"></i>วิธีระงับความรู้สึก</span>
+                            <span class="text-muted"><i class="fa-solid fa-weight-scale me-2"></i>น้ำหนัก</span>
+                            <span class="fw-bold">{{ patient_info.weight|default:"60" }} กก.</span>
+                        </div>
+                        
+                        <div class="data-row">
+                            <span class="text-muted"><i class="fa-solid fa-mask-ventilator me-2"></i>ระงับความรู้สึก</span>
                             <span class="badge bg-secondary fw-normal">
                                 {% if patient_info.anes == 'ANES_GA' %}GA (ดมยาสลบ)
                                 {% elif patient_info.anes == 'ANES_Local' %}Local (เฉพาะที่)
                                 {% elif patient_info.anes == 'ANES_TIVA' %}TIVA
                                 {% elif patient_info.anes == 'ANES_None' %}ไม่มีการดมยาสลบ
-                                {% elif patient_info.anes == 'ANES_Complex' %}ซับซ้อน
+                                {% elif patient_info.anes == 'ANES_Complex' %}ซับซ้อน (Complicated)
                                 {% else %}อื่นๆ{% endif %}
                             </span>
                         </div>

@@ -28,69 +28,22 @@
         .btn-predict { background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; padding: 15px; font-weight: bold; border-radius: 10px; border: none; font-size: 1.1rem; transition: all 0.3s; width: 100%; margin-top: 10px;}
         .btn-predict:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4); color: white; }
 
-        /* ========================================================
-           ⭐️ ระบบแยกช่องค้นหากับรายการที่เลือก (Custom List) ⭐️
-        ======================================================== */
-        
-        /* 1. ซ่อน Tag ก้อนๆ แบบเดิมของ Select2 ทิ้งไปเลย ให้ช่องมันโล่งๆ */
-        .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
-            display: none !important;
-        }
-        /* 2. จัดระเบียบช่องค้นหาไม่ให้มันบีบตัว */
-        .select2-container--bootstrap-5 .select2-selection--multiple {
-            min-height: 48px;
-            display: flex;
-            align-items: center;
-        }
-        .select2-container--bootstrap-5 .select2-search--inline .select2-search__field {
-            margin-top: 0 !important;
-        }
+        .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice { display: none !important; }
+        .select2-container--bootstrap-5 .select2-selection--multiple { min-height: 48px; display: flex; align-items: center; }
+        .select2-container--bootstrap-5 .select2-search--inline .select2-search__field { margin-top: 0 !important; }
 
-        /* 3. สร้างกล่องรายการที่เลือกลงมาโชว์ด้านล่างให้สวยงาม (แยกอิสระ) */
         .custom-selected-item {
-            background-color: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-left: 4px solid #0ea5e9; /* แถบสีฟ้าด้านซ้ายให้ดูโปร */
-            border-radius: 6px;
-            padding: 12px 15px;
-            margin-top: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            transition: all 0.2s ease;
+            background-color: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid #0ea5e9;
+            border-radius: 6px; padding: 12px 15px; margin-top: 10px; display: flex;
+            justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s ease;
         }
-        .custom-selected-item:hover {
-            border-color: #cbd5e1;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-        }
-        .custom-item-text {
-            color: #334155;
-            font-size: 0.95rem;
-            flex-grow: 1;
-            margin-right: 15px;
-            word-break: break-word;
-        }
-        /* 4. ปุ่มกากบาทลบรายการสุดคลีน */
+        .custom-selected-item:hover { border-color: #cbd5e1; box-shadow: 0 2px 5px rgba(0,0,0,0.08); }
+        .custom-item-text { color: #334155; font-size: 0.95rem; flex-grow: 1; margin-right: 15px; word-break: break-word; }
         .custom-remove-btn {
-            background-color: #fee2e2;
-            color: #ef4444;
-            border: none;
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            flex-shrink: 0; /* ป้องกันปุ่มเบี้ยว */
+            background-color: #fee2e2; color: #ef4444; border: none; border-radius: 50%; width: 28px; height: 28px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; flex-shrink: 0;
         }
-        .custom-remove-btn:hover {
-            background-color: #ef4444;
-            color: white;
-            transform: scale(1.1);
-        }
+        .custom-remove-btn:hover { background-color: #ef4444; color: white; transform: scale(1.1); }
     </style>
 </head>
 <body>
@@ -133,13 +86,9 @@
                     
                     <div class="col-md-12">
                         <label class="form-label">รายการหัตถการที่ทำ <span class="text-danger">*</span></label>
-                        
-                        <select name="TreatmentCode" id="treatmentSelect" class="form-select select2" multiple="multiple" required>
-                            </select>
+                        <select name="TreatmentCode" id="treatmentSelect" class="form-select select2" multiple="multiple" required></select>
                         <div class="form-text mt-1 mb-2"><i class="fa-solid fa-magnifying-glass text-primary"></i> พิมพ์ค้นหาและคลิกเลือก (สามารถเลือกได้หลายรายการ)</div>
-
-                        <div id="customSelectedContainer">
-                            </div>
+                        <div id="customSelectedContainer"></div>
                     </div>
                 </div>
             </div>
@@ -152,10 +101,6 @@
             <div class="card-body p-4">
                 <div class="row g-4">
                     <div class="col-md-3">
-                        <label class="form-label">อายุผู้ป่วย (ปี)</label>
-                        <input type="number" name="Age" class="form-control" value="40" required>
-                    </div>
-                    <div class="col-md-3">
                         <label class="form-label d-block">เพศ</label>
                         <div class="form-check form-check-inline mt-2">
                             <input class="form-check-input" type="radio" name="Gender" id="genderMale" value="2" checked>
@@ -165,6 +110,10 @@
                             <input class="form-check-input" type="radio" name="Gender" id="genderFemale" value="1">
                             <label class="form-check-label" for="genderFemale">หญิง</label>
                         </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">อายุผู้ป่วย (ปี)</label>
+                        <input type="number" name="Age" class="form-control" value="40" required>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">น้ำหนัก (กก.)</label>
@@ -189,38 +138,44 @@
                     <div class="row">
                         <div class="col-md-4 mb-2">
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="FacilityRmsNo" id="loc1" value="400 เตียง" checked>
+                                <input class="form-check-input" type="radio" name="FacilityRmsNo" id="loc1" value="4OR" checked>
                                 <label class="form-check-label" for="loc1">400 เตียง</label>
                             </div>
                         </div>
                         <div class="col-md-4 mb-2">
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="FacilityRmsNo" id="loc2" value="100 เตียง">
+                                <input class="form-check-input" type="radio" name="FacilityRmsNo" id="loc2" value="OR">
                                 <label class="form-check-label" for="loc2">100 เตียง</label>
                             </div>
                         </div>
                         <div class="col-md-4 mb-2">
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="FacilityRmsNo" id="loc3" value="Hybrid">
+                                <input class="form-check-input" type="radio" name="FacilityRmsNo" id="loc3" value="ORHB">
                                 <label class="form-check-label" for="loc3">Hybrid</label>
                             </div>
                         </div>
                         <div class="col-md-4 mb-2">
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="FacilityRmsNo" id="loc4" value="นอกเวลา">
+                                <input class="form-check-input" type="radio" name="FacilityRmsNo" id="loc4" value="EOUT">
                                 <label class="form-check-label" for="loc4">นอกเวลา</label>
                             </div>
                         </div>
                         <div class="col-md-4 mb-2">
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="FacilityRmsNo" id="loc5" value="100 เตียง (นอกเวลา)">
+                                <input class="form-check-input" type="radio" name="FacilityRmsNo" id="loc5" value="OROUT">
                                 <label class="form-check-label" for="loc5">100 เตียง (นอกเวลา)</label>
                             </div>
                         </div>
                         <div class="col-md-4 mb-2">
                             <div class="form-check">
+                                <input class="form-check-input" type="radio" name="FacilityRmsNo" id="loc7" value="4OROT">
+                                <label class="form-check-label" for="loc7">400 เตียง (นอกเวลา)</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
                                 <input class="form-check-input" type="radio" name="FacilityRmsNo" id="loc6" value="OROPH">
-                                <label class="form-check-label" for="loc6">OROPH</label>
+                                <label class="form-check-label" for="loc6">OROPH (จักษุ)</label>
                             </div>
                         </div>
                     </div>
@@ -231,11 +186,11 @@
                         <label class="form-label">ประเภทเคส (Major/Minor)</label>
                         <div class="radio-group-box h-auto py-3">
                             <div class="form-check form-check-inline me-4">
-                                <input class="form-check-input" type="radio" name="ORClassifiedType" id="class1" value="Major" checked>
+                                <input class="form-check-input" type="radio" name="ORClassifiedType" id="class1" value="1" checked>
                                 <label class="form-check-label" for="class1">Major</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="ORClassifiedType" id="class2" value="Minor">
+                                <input class="form-check-input" type="radio" name="ORClassifiedType" id="class2" value="2">
                                 <label class="form-check-label" for="class2">Minor</label>
                             </div>
                         </div>
@@ -244,15 +199,15 @@
                         <label class="form-label">ความเร่งด่วน</label>
                         <div class="radio-group-box h-auto py-3">
                             <div class="form-check form-check-inline me-3">
-                                <input class="form-check-input" type="radio" name="ORCaseType" id="urg1" value="Emergency" checked>
+                                <input class="form-check-input" type="radio" name="ORCaseType" id="urg1" value="1">
                                 <label class="form-check-label" for="urg1">Emergency</label>
                             </div>
                             <div class="form-check form-check-inline me-3">
-                                <input class="form-check-input" type="radio" name="ORCaseType" id="urg2" value="Urgency">
+                                <input class="form-check-input" type="radio" name="ORCaseType" id="urg2" value="2">
                                 <label class="form-check-label" for="urg2">Urgency</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="ORCaseType" id="urg3" value="Elective">
+                                <input class="form-check-input" type="radio" name="ORCaseType" id="urg3" value="3" checked>
                                 <label class="form-check-label" for="urg3">Elective</label>
                             </div>
                         </div>
@@ -338,64 +293,42 @@ $(document).ready(function() {
     const $customContainer = $('#customSelectedContainer');
 
     $txSelect.select2({ 
-        theme: 'bootstrap-5', 
-        width: '100%', 
-        placeholder: " พิมพ์ค้นหาหัตถการตรงนี้...", 
-        allowClear: true, 
-        closeOnSelect: false 
+        theme: 'bootstrap-5', width: '100%', placeholder: " พิมพ์ค้นหาหัตถการตรงนี้...", allowClear: true
     });
 
-    // ⭐️ ฟังก์ชันอัปเดตกล่องรายการด้านล่าง ⭐️
     function updateCustomList() {
         $customContainer.empty();
         const selectedData = $txSelect.select2('data');
 
         selectedData.forEach(item => {
-            if (!item.id) return; // ข้าม placeholder ว่างๆ
-            
-            // วาดกล่องรายการที่เลือก
+            if (!item.id) return; 
             const boxHtml = `
                 <div class="custom-selected-item">
                     <div class="custom-item-text">
-                        <i class="fa-solid fa-stethoscope text-secondary me-2"></i> 
-                        ${item.text}
+                        <i class="fa-solid fa-stethoscope text-secondary me-2"></i> ${item.text}
                     </div>
                     <button type="button" class="custom-remove-btn" data-id="${item.id}" title="ลบรายการนี้">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
-                </div>
-            `;
+                </div>`;
             $customContainer.append(boxHtml);
         });
     }
 
-    // เมื่อ Select2 มีการเลือกหรือยกเลิก ให้ไปวาดกล่องข้างล่างใหม่
-    $txSelect.on('change', function() {
-        updateCustomList();
-    });
+    $txSelect.on('change', updateCustomList);
 
-    // เมื่อกดปุ่มกากบาท (X) ลบออกจากรายการ
     $customContainer.on('click', '.custom-remove-btn', function() {
         const idToRemove = $(this).data('id');
         let currentValues = $txSelect.val() || [];
-        
-        // ถอดรหัสที่ถูกลบออก
         currentValues = currentValues.filter(val => val !== String(idToRemove));
-        
-        // ยัดค่ากลับเข้าไปให้ Select2 ใหม่อีกรอบ
         $txSelect.val(currentValues).trigger('change');
     });
 
-
-    // Auto Select แผนกตามแพทย์
     $('#doctorSelect').on('change', function() {
         const spec = $(this).find(':selected').data('spec');
-        if (spec && spec !== 'nan' && spec !== 'None') {
-            $('#specialtySelect').val(spec).trigger('change');
-        }
+        if (spec && spec !== 'nan' && spec !== 'None') $('#specialtySelect').val(spec).trigger('change');
     });
 
-    // กรองหัตถการตามแผนก
     $('#specialtySelect').on('change', function() {
         const selectedSpec = $(this).val();
         const currentSelection = $txSelect.val() || [];
@@ -416,9 +349,7 @@ $(document).ready(function() {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     const startTimeInput = document.getElementById('startTimeInput');
-    if (startTimeInput) {
-        startTimeInput.value = now.toISOString().slice(0, 16); 
-    }
+    if (startTimeInput) startTimeInput.value = now.toISOString().slice(0, 16); 
 
     $('#predictForm').on('submit', function() {
         let btn = $('#submitBtn');
