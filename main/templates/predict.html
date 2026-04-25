@@ -28,10 +28,12 @@
         .btn-predict { background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; padding: 15px; font-weight: bold; border-radius: 10px; border: none; font-size: 1.1rem; transition: all 0.3s; width: 100%; margin-top: 10px;}
         .btn-predict:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4); color: white; }
 
+        /* ซ่อน Tag แบบเดิมของ Select2 ทิ้งไปเลย ให้ช่องมันโล่งๆ */
         .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice { display: none !important; }
         .select2-container--bootstrap-5 .select2-selection--multiple { min-height: 48px; display: flex; align-items: center; }
         .select2-container--bootstrap-5 .select2-search--inline .select2-search__field { margin-top: 0 !important; }
 
+        /* ดีไซน์กล่องรายการหัตถการที่เลือก (โชว์ด้านล่าง) */
         .custom-selected-item {
             background-color: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid #0ea5e9;
             border-radius: 6px; padding: 12px 15px; margin-top: 10px; display: flex;
@@ -86,7 +88,8 @@
                     
                     <div class="col-md-12">
                         <label class="form-label">รายการหัตถการที่ทำ <span class="text-danger">*</span></label>
-                        <select name="TreatmentCode" id="treatmentSelect" class="form-select select2" multiple="multiple" required></select>
+                        <select name="TreatmentCode" id="treatmentSelect" class="form-select select2" multiple="multiple" required>
+                        </select>
                         <div class="form-text mt-1 mb-2"><i class="fa-solid fa-magnifying-glass text-primary"></i> พิมพ์ค้นหาและคลิกเลือก (สามารถเลือกได้หลายรายการ)</div>
                         <div id="customSelectedContainer"></div>
                     </div>
@@ -292,10 +295,15 @@ $(document).ready(function() {
     const $txSelect = $('#treatmentSelect');
     const $customContainer = $('#customSelectedContainer');
 
+    // โหลด Select2 ค้นหาหัตถการ (พับเก็บเมื่อเลือกเสร็จอัตโนมัติ)
     $txSelect.select2({ 
-        theme: 'bootstrap-5', width: '100%', placeholder: " พิมพ์ค้นหาหัตถการตรงนี้...", allowClear: true
+        theme: 'bootstrap-5', 
+        width: '100%', 
+        placeholder: " พิมพ์ค้นหาหัตถการตรงนี้...", 
+        allowClear: true
     });
 
+    // ฟังก์ชันวาดรายการหัตถการด้านล่าง
     function updateCustomList() {
         $customContainer.empty();
         const selectedData = $txSelect.select2('data');
@@ -317,6 +325,7 @@ $(document).ready(function() {
 
     $txSelect.on('change', updateCustomList);
 
+    // ลบหัตถการเมื่อกดปุ่มกากบาท
     $customContainer.on('click', '.custom-remove-btn', function() {
         const idToRemove = $(this).data('id');
         let currentValues = $txSelect.val() || [];
@@ -324,11 +333,13 @@ $(document).ready(function() {
         $txSelect.val(currentValues).trigger('change');
     });
 
+    // ออโต้เลือกแผนกเมื่อเลือกหมอ
     $('#doctorSelect').on('change', function() {
         const spec = $(this).find(':selected').data('spec');
         if (spec && spec !== 'nan' && spec !== 'None') $('#specialtySelect').val(spec).trigger('change');
     });
 
+    // กรองหัตถการตามแผนกที่เลือก
     $('#specialtySelect').on('change', function() {
         const selectedSpec = $(this).val();
         const currentSelection = $txSelect.val() || [];
@@ -346,15 +357,26 @@ $(document).ready(function() {
         $txSelect.trigger('change');
     });
 
+    // เซ็ตเวลาเป็นปัจจุบันอัตโนมัติ
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     const startTimeInput = document.getElementById('startTimeInput');
     if (startTimeInput) startTimeInput.value = now.toISOString().slice(0, 16); 
 
+    // เปลี่ยนปุ่มเป็น Loading เมื่อกด
     $('#predictForm').on('submit', function() {
         let btn = $('#submitBtn');
         btn.prop('disabled', true);
         btn.html('<i class="fa-solid fa-spinner fa-spin me-2"></i> AI กำลังประมวลผล...');
+    });
+
+    // คืนค่าปุ่มหากผู้ใช้กดย้อนกลับจากเบราว์เซอร์
+    $(window).on('pageshow', function(event) {
+        if (event.originalEvent.persisted) {
+            let btn = $('#submitBtn');
+            btn.prop('disabled', false);
+            btn.html('<i class="fa-solid fa-wand-magic-sparkles me-2"></i> ประมวลผลด้วย AI');
+        }
     });
 });
 </script>
