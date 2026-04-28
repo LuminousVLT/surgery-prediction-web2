@@ -24,7 +24,6 @@ class SurgeryPredictor:
 
             saved_data = joblib.load(model_file)
             
-            # ⭐️ โหลดโมเดลทั้ง 3 ตัวของ LightGBM
             self.model_avg = saved_data.get('lgb_avg')
             self.model_min = saved_data.get('lgb_min')
             self.model_max = saved_data.get('lgb_max')
@@ -35,6 +34,9 @@ class SurgeryPredictor:
             self.spec_stats = saved_data['spec_stats']
             self.global_mean = saved_data['global_mean']
             self.feature_columns = saved_data['feature_names']
+            
+            # ⭐️ จุดแก้ที่ 1: ดึงสมุดหน้าเหลือง (Category Mappings) มาจากไฟล์ .pkl
+            self.cat_mappings = saved_data.get('cat_mappings', {})
             
             ds_df = saved_data['doc_spec_stats']
             self.ds_map = ds_df.set_index(['Doctor', 'Specialty'])['Doc_Spec_Avg'].to_dict()
@@ -117,14 +119,24 @@ class SurgeryPredictor:
         final_df = pd.DataFrame([df_dict])
         
         cat_cols = ['Gender', 'FacilityRmsNo', 'ORClassifiedType', 'ORCaseType', 'AnesthesiaType', 'Day_of_Week', 'Doctor', 'Main_TreatmentCode', 'Specialty', 'Time_Period', 'BMI_Cat']
+        
+        # ⭐️ จุดแก้ที่ 2: บังคับล็อครหัส Category ให้ตรงกับตอนเทรนเป๊ะๆ
         for c in cat_cols:
-            if c in final_df.columns: final_df[c] = final_df[c].astype(str).replace('nan', 'Unknown').astype('category')
+            if c in final_df.columns:
+                val_str = str(final_df[c].iloc[0]).replace('nan', 'Unknown')
+                if c in self.cat_mappings:
+                    final_df[c] = pd.Categorical([val_str], categories=self.cat_mappings[c])
+                else:
+                    final_df[c] = final_df[c].astype('category')
 
         for col in self.feature_columns:
             if col not in final_df.columns:
                 if col in cat_cols:
-                    final_df[col] = 'Unknown'
-                    final_df[col] = final_df[col].astype('category')
+                    if col in self.cat_mappings:
+                        final_df[col] = pd.Categorical(['Unknown'], categories=self.cat_mappings[col])
+                    else:
+                        final_df[col] = 'Unknown'
+                        final_df[col] = final_df[col].astype('category')
                 else: final_df[col] = 0.0
 
         return final_df.reindex(columns=self.feature_columns)
@@ -134,10 +146,10 @@ class SurgeryPredictor:
             X = self.preprocess_input(input_data)
             if X is None: return {'avg': 0, 'min': 0, 'max': 0, 'details': {}}
 
-            # ⭐️ ให้ AI ทั้ง 3 ตัวทาย (ไม่ต้องถอด expm1 เพราะตอนเทรนไม่ได้แปลง Log)
-            p_avg = max(self.model_avg.predict(X)[0], 0)
+            # ⭐️ จุดแก้ที่ 3: โมเดล AVG ตอนเทรน 100% ตัวล่าสุด เราใส่ Log ไปแล้ว ต้องถอดด้วย expm1 ครับ
+            p_avg = max(np.expm1(self.model_avg.predict(X)[0]), 0)
             
-            # ป้องกันกรณีโหลดโมเดล Min/Max ไม่ผ่าน
+            # ส่วน MIN/MAX เทรนด้วยค่าจริง ไม่ต้องถอดครับ
             if self.model_min and self.model_max:
                 p_min = max(self.model_min.predict(X)[0], 0)
                 p_max = max(self.model_max.predict(X)[0], 0)
@@ -153,7 +165,7 @@ class SurgeryPredictor:
                 'avg': int(p_avg),
                 'min': int(p_min),
                 'max': int(p_max),
-                'details': {'LightGBM': int(p_avg)} # ส่งชื่อไปให้ views วาดกราฟแท่งเดียว
+                'details': {'LightGBM': int(p_avg)} 
             }
         except Exception as e:
             print(f"❌ [AI Engine] Prediction Error: {e}")

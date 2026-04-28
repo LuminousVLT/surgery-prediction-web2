@@ -156,19 +156,31 @@ def predict_submit(request):
             'Start_Hour': start_hour, 
         }
 
+        # ดึงผลลัพธ์จาก AI (รับค่ามาแล้วปัดเศษให้เรียบร้อย)
         result = predictor.predict(input_data)
         base_avg = result.get('avg', 0)
         base_min = result.get('min', 0)
         base_max = result.get('max', 0)
         
-        # ปัจจัยความยาก (Complexity Factor)
-        final_avg = int(base_avg * complexity_factor)
-        final_min = int(base_min * complexity_factor)
-        final_max = int(base_max * complexity_factor)
+        # คูณปัจจัยความยาก (Complexity Factor)
+        final_avg = int(round(base_avg * complexity_factor))
+        final_min = int(round(base_min * complexity_factor))
+        final_max = int(round(base_max * complexity_factor))
+        
+        # 🛡️ Guardrails ขั้นสุดท้าย: ป้องกันกรณีคูณ Factor แล้วปัดเศษเหลื่อมกัน
+        if final_min >= final_avg:
+            final_min = max(1, final_avg - 1)
+        if final_max <= final_avg:
+            final_max = final_avg + 1
+            
+        # ไม่ให้มีค่าเป็น 0 นาที
+        final_min = max(1, final_min)
+        final_avg = max(1, final_avg)
+        final_max = max(2, final_max)
         
         context = {
             'stats': {
-                'min': max(5, final_min), 
+                'min': final_min, # ⭐️ ถอด max(5, ...) ออกแล้วครับ ใช้ค่าจริงจาก AI
                 'avg': final_avg,
                 'max': final_max           
             },
