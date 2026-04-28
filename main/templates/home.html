@@ -1,16 +1,18 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <title>หน้าแรก - Predict Surgery Time</title>
-  <link rel="stylesheet" href="/static/style.css">
+    <meta charset="UTF-8">
+    <title>หน้าแรก | Surgery Predictor</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
 </head>
-<body class="center">
-  <h2>Predict Surgery Duration</h2>
-  <img src="/static/images/doctor.png" alt="Doctor" width="400">
-  <div class="btn-container">
-    <a href="/login"><button>เข้าสู่ระบบ</button></a>
-    <a href="/register"><button>สมัครใช้งาน</button></a>
-  </div>
+<body>
+    <div style="text-align: center; margin-top: 100px;">
+        <h1>ยินดีต้อนรับสู่ระบบทำนายเวลาผ่าตัด</h1>
+        <div style="margin-top: 20px;">
+            <a href="{% url 'login' %}" style="text-decoration: none; padding: 10px 20px; background: #007bff; color: white; border-radius: 5px;">เข้าสู่ระบบ</a>
+            <a href="{% url 'register' %}" style="text-decoration: none; padding: 10px 20px; background: #28a745; color: white; border-radius: 5px; margin-left: 10px;">สมัครสมาชิก</a>
+        </div>
+    </div>
 </body>
 </html>
