@@ -78,14 +78,60 @@ DROPDOWN_DATA = get_dropdown_data()
 def root_redirect(request):
     return redirect('login')
 
+from django.contrib.auth import login, authenticate
+from django.contrib.sites.shortcuts import get_current_site
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.template.loader import render_to_string
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import EmailMessage
+from django.contrib.auth.models import User
+
+# ... โค้ดอื่นๆ ...
+
+def activate(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        user.is_active = True
+        user.save()
+        messages.success(request, 'ยืนยันอีเมลสำเร็จ! คุณสามารถเข้าสู่ระบบได้แล้ว')
+        return redirect('login')
+    else:
+        messages.error(request, 'ลิงก์ยืนยันตัวตนไม่ถูกต้องหรือหมดอายุ')
+        return redirect('register')
+
 def register_view(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, 'ลงทะเบียนและเข้าสู่ระบบสำเร็จ!')
-            return redirect('predict_page') 
+            # ... โค้ดเดิมสำหรับบันทึกและส่งเมล ...
+            user = form.save(commit=False)
+            user.is_active = False
+            user.email = request.POST.get('email')
+            user.save()
+
+            current_site = get_current_site(request)
+            mail_subject = 'ยืนยันการสมัครสมาชิก Surgery Predictor'
+            message = render_to_string('registration/acc_active_email.html', {
+                'user': user,
+                'domain': current_site.domain,
+                'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+                'token': default_token_generator.make_token(user),
+            })
+            to_email = request.POST.get('email')
+            email = EmailMessage(mail_subject, message, to=[to_email])
+            email.send()
+
+            return render(request, 'registration/check_email.html')
+        else:
+            # ถ้าฟอร์มไม่ผ่าน (เช่น ชื่อซ้ำ) ให้ส่งข้อความแจ้งเตือน
+            for error in form.errors.values():
+                messages.error(request, error)
     else:
         form = UserCreationForm()
     return render(request, 'register.html', {'form': form})
